@@ -1,0 +1,140 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: userId (Firebase Auth UID)
+    // Fields:
+    //   - displayName: string (required)
+    //   - email: string (required, email format)
+    //   - phoneNumber: string (optional)
+    //   - farmerId: string (required, 12 digits)
+    //   - farmLocation: string (optional)
+    //   - farmLength: string (optional)
+    //   - farmBreadth: string (optional)
+    //   - farmUnit: enum ['acre', 'hectare', 'guntha'] (optional)
+    //   - timestamp: timestamp (optional)
+    //
+    // Collection: diagnoses
+    // Document ID: diagnosisId
+    // Fields:
+    //   - cropType: string (required)
+    //   - imageUrl: string (optional, URL format)
+    //   - result: string (required)
+    //   - timestamp: timestamp (required)
+    //   - userId: string (required, matches auth.uid)
+    //
+    // Collection: advice
+    // Document ID: adviceId
+    // Fields:
+    //   - query: string (required)
+    //   - response: string (required)
+    //   - timestamp: timestamp (required)
+    //   - userId: string (required, matches auth.uid)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.userId;
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidUrl(url) {
+      return url is string && (url.matches("^https://.*") || url.matches("^http://.*"));
+    }
+
+    function hasOnlyAllowedFields(allowedFields) {
+      return request.resource.data.keys().hasOnly(allowedFields);
+    }
+
+    function hasRequiredFields(requiredFields) {
+      return request.resource.data.keys().hasAll(requiredFields);
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "pavanwadile777@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return hasRequiredFields(['displayName', 'email', 'farmerId']) &&
+             hasOnlyAllowedFields(['displayName', 'email', 'phoneNumber', 'farmerId', 'farmLocation', 'farmLength', 'farmBreadth', 'farmUnit', 'timestamp', 'role']) &&
+             data.displayName is string && data.displayName.size() > 0 && data.displayName.size() < 100 &&
+             isValidEmail(data.email) &&
+             data.farmerId is string && data.farmerId.matches("^\\d{12}$") &&
+             (!('farmUnit' in data) || data.farmUnit in ['acre', 'hectare', 'guntha']) &&
+             (!('role' in data) || data.role == 'user' || isAdmin());
+    }
+
+    function isValidDiagnosis(data) {
+      return hasRequiredFields(['cropType', 'result', 'timestamp', 'userId']) &&
+             hasOnlyAllowedFields(['cropType', 'imageUrl', 'result', 'timestamp', 'userId']) &&
+             data.cropType is string && data.cropType.size() > 0 && data.cropType.size() < 100 &&
+             data.result is string && data.result.size() > 0 && data.result.size() < 5000 &&
+             data.timestamp is timestamp &&
+             data.userId == request.auth.uid &&
+             (!('imageUrl' in data) || isValidUrl(data.imageUrl));
+    }
+
+    function isValidAdvice(data) {
+      return hasRequiredFields(['query', 'response', 'timestamp', 'userId']) &&
+             hasOnlyAllowedFields(['query', 'response', 'timestamp', 'userId']) &&
+             data.query is string && data.query.size() > 0 && data.query.size() < 2000 &&
+             data.response is string && data.response.size() > 0 && data.response.size() < 5000 &&
+             data.timestamp is timestamp &&
+             data.userId == request.auth.uid;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data) && (!('role' in request.resource.data) || request.resource.data.role == 'user');
+      allow update: if isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.role == resource.data.role || isAdmin());
+    }
+
+    match /diagnoses/{diagnosisId} {
+      allow read: if isDocOwner() || isAdmin();
+      allow create: if isAuthenticated() && isValidDiagnosis(request.resource.data);
+      allow update: if isDocOwner() && isValidDiagnosis(request.resource.data) && request.resource.data.userId == resource.data.userId;
+      allow delete: if isDocOwner() || isAdmin();
+    }
+
+    match /advice/{adviceId} {
+      allow read: if isDocOwner() || isAdmin();
+      allow create: if isAuthenticated() && isValidAdvice(request.resource.data);
+      allow update: if isDocOwner() && isValidAdvice(request.resource.data) && request.resource.data.userId == resource.data.userId;
+      allow delete: if isDocOwner() || isAdmin();
+    }
+
+    // Default deny
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}
