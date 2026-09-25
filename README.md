@@ -1,35 +1,20 @@
 # Agri Support 🌱
 
-A modern agriculture-support web application focused on helping users access **AI-assisted farming information, agricultural resources, and data-driven insights**.
+A modern agriculture-support platform focused on **AI-assisted farming information, crop support, agricultural resources, and data-driven insights**.
 
 ## ✨ Highlights
-
 - Agriculture-focused dashboard
 - AI-assisted information workflows
 - Farming and crop support
-- Interactive data visualizations
+- Interactive charts and analytics
 - Firebase integration
 - Responsive React interface
 - Markdown content rendering
-- Charts and analytics
 
-## 🛠 Tech Stack
-
-- React 19
-- TypeScript
-- Vite
-- Tailwind CSS
-- Firebase
-- Google Gemini API
-- Recharts
-- D3
-- React Markdown
-- Lucide React
-- Motion
-- Express
+## 🛠️ Tech Stack
+**React 19 · TypeScript · Vite · Tailwind CSS · Firebase · Google Gemini · Recharts · D3 · React Markdown · Motion · Express**
 
 ## ▶️ Run Locally
-
 ```bash
 git clone https://github.com/PavanWadile77/Agri-Support.git
 cd Agri-Support
@@ -37,33 +22,17 @@ npm install
 npm run dev
 ```
 
-Production build:
-
+Build:
 ```bash
 npm run build
 npm run preview
 ```
 
-Type-check:
-
-```bash
-npm run lint
-```
-
 ## 🔐 Configuration
+Configure Firebase and AI services locally using environment variables. Never commit secrets.
 
-Use the supplied environment example to configure required services:
+## 🔗 Project
+[GitHub Repository](https://github.com/PavanWadile77/Agri-Support)
 
-```bash
-cp .env.example .env
-```
-
-Configure Firebase and AI service credentials locally. Do not commit secrets.
-
-## Repository
-
-https://github.com/PavanWadile77/Agri-Support
-
-## Author
-
+## 👨‍💻 Author
 **Pavan Wadile**
